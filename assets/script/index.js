@@ -1,57 +1,67 @@
 const URL = "https://api.dictionaryapi.dev/api/v2/entries/en/";
 const submitButton = document.querySelector("#FindWord");
 
+/* DOM */
+const container = (frags) => {
+    const frag = document.createDocumentFragment();
+    const ul = document.createElement("ul");
+    ul.classList.add("js-container");
+    ul.classList.add("l__dic-container");
+    frag.appendChild(ul);
+
+    return frag;
+}
+
+const speechContainer = (data) => {
+    const frag = document.createDocumentFragment();
+    
+    data?.forEach(data => {
+        const newDOM = `
+            <li>
+                <h3>${data.partOfSpeech}</h3>
+                <ul>
+                    ${
+                        data.definitions.map((d) => {
+                            return `
+                                <li> 
+                                    <h4>${d.definition}</h4>
+                                    ${
+                                        d.example ? `<p>${d.example}</p>` : ""
+                                    }
+                                </li>
+                            `
+                        }).join("")
+                    }
+                </ul>
+            </li>
+        `
+        const context = document.createRange().createContextualFragment(newDOM);
+
+        frag.appendChild(context);
+    })
+
+    return frag;
+}
+
+/* Events */
+
 submitButton.addEventListener("submit", async function (e) {
     e.preventDefault();
     document.querySelector("#Dictionary").replaceChildren();
 
     const word = document.querySelector("#Word").value;
     const data = await fetch_api(URL + word);
+    document.querySelector("#Dictionary").appendChild(container());
+
+    const ul = document.querySelector(".js-container");
     
-    dictionaryParent();
-    createUppermostListItem(data, speechs);
+    ul.appendChild(speechContainer(data));
+    
+
+
 })
 
-function dictionaryParent () {
-    const frag = new DocumentFragment();
-    const dictionary = document.querySelector("#Dictionary");
-
-    const listContainer = document.createElement("ul");
-    listContainer.classList.add("l__list-container");
-    listContainer.id = "ListContainer";
-    
-    frag.append(listContainer);
-    dictionary.append(frag);
-
-}
-
-function speechs(data) {
-    const frag = new DocumentFragment();
-    const speech = document.createElement("h3");
-    speech.classList.add("m__md-header");
-
-    speech.textContent = data;
-    frag.append(speech);
-
-    return frag;
-}
-
-function createUppermostListItem(data, speechHeader) {
-    const frag = new DocumentFragment();
-    const container = document.querySelector("#ListContainer");
-    
-    data.forEach(d => {
-        const li = document.createElement("li");
-        li.classList.add("l__uppermost-lists");
-        li.setAttribute("data-definition", d.partOfSpeech);
-        li.append(speechHeader(d.partOfSpeech));
-        frag.append(li);
-    });
-
-    container.append(frag);
-    
-}
-
+/* Fetch / API */
 async function fetch_api(url) {
     try {
         const response = await fetch(url);
@@ -59,10 +69,18 @@ async function fetch_api(url) {
             throw new Error(response)
         }
         const data = await response.json();
-
-        return data[0].meanings;
+        console.log(data)
+        const meaningsObj = data.flatMap(({meanings}) => meanings);
+        
+        const arr = meaningsObj.map((d) => ({
+            partOfSpeech: d.partOfSpeech,
+            definitions: d.definitions,
+            synonyms: d.synonyms
+        }));
+        return arr;
     } catch (error) {
         throw new Error(`Couldn't complete task due to: ${error}`);
     }
 
 }
+
